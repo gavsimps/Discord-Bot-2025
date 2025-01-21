@@ -1,6 +1,9 @@
 import discord, os, requests, json, asyncio, random, sqlite3
 import pytz, yt_dlp, urllib, threading, shutil, sys, re
 import subprocess as sp
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth as spauth
+
 from dotenv import load_dotenv
 from discord.ext import commands, tasks
 from async_timeout import timeout
@@ -63,6 +66,16 @@ def get_mention(id):
     MENTION = f'<@{id}>'
     return MENTION
 
+def randomError():
+    messages = ["Did you even use the Readme that isn't linked anywhere?",
+                "Have you tried plugging your keyboard in? I heard that helps with typing.",
+                "I heard opening your eyes helps type, just a thought though.",
+                'You\'re fucking with me, right?',
+                "I could've sworn you passed 1st grade English.",
+                "Dumbass, learn to type or stop talking to me."]
+    rand_msg = random.choice(messages)
+    return rand_msg
+
 # delete drews messages
 @bot.listen()
 async def on_message(msg):
@@ -71,9 +84,11 @@ async def on_message(msg):
                     'lol',
                     f'DAMN! WHAT YOU WANT {get_mention(msg.author.id)}????',
                     'Is it nasty time yet?',
-                    'Please kill me or better yet, kill the server owner',
-                    "Whats up? Need something stupid?",
-                    "I'm always watching."]
+                    'IF YOU ARE AN ADMIN TYPE !RESTART TO KILL ME',
+                    "Whats up? Need something, stupid?",
+                    "I'm always listening btw",
+                    "I have a secret, message prompt, try to find it ;)",
+                    "Yes, I am funded by the CCP and your data is being sold to them. They really like the yaoi."]
         random_message = random.choice(messages)
         return random_message
 
@@ -108,23 +123,24 @@ async def clean(ctx, num):
 
 # randomly dc someone
 @bot.command()
-@commands.has_permissions(administrator=True)
-async def d(ctx): 
+# @commands.has_permissions(administrator=True)
+async def dc(ctx): 
+    ignored_channel = ctx.guild.afk_channel
     vc_list = ctx.guild.voice_channels
-    channel = bot.get_channel(MAIN_CHANNEL)
     active_channels = []
     memids = []
     for vc in vc_list:
-        if len(vc.members) > 0:
+        if len(vc.members) > 0 and vc != ignored_channel:
             active_channels.append(vc)
             for member in vc.members:
                 memids.append(member)
     
     lucky = random.choice(memids)
+    print(lucky)
 
-    await lucky.move_to(None)
+    await lucky.move_to(ctx.guild.afk_channel)
 
-    await channel.send(f'{get_mention(lucky.id)} got unlucky. What a stupid feature.')
+    await ctx.send(f'{get_mention(lucky.id)} got unlucky. What a stupid feature.')
     
 # russian roulette
 @bot.command()
@@ -195,6 +211,34 @@ async def me(ctx):
     else:
         await ctx.send(f"""```ansi\nName: {ctx.author.name}\nID: {ansi.RED}{ctx.author.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{ctx.author.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{ctx.author.status}{ansi.NC} \nServer Nickname: {ctx.author.nick} \nWhen you Joined: {ansi.CYAN}{ctx.author.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\nAvatar:\n```{ctx.author.display_avatar}""")
 
+@bot.command()
+async def stat(ctx, member: discord.Member):
+    roles = []
+    for role in member.roles:
+        roles.append(role.name)
+    roles.remove('@everyone')
+
+    roles = ["- " + item for item in roles]
+    # roles = [item + "\n" for item in roles]
+
+    roles.sort(reverse=True)
+    rolelist = "\n".join(roles)
+
+    if 'online' in member.status:
+        online_status = ansi.GREEN
+    elif 'dnd' in member.status:
+        online_status = ansi.RED
+    elif "idle" in member.status:
+        online_status = ansi.YELLOW
+    else:
+        online_status = ansi.NC
+    
+    if member.id == 595013132146180099:
+        await ctx.send(f"""```ansi\nName: {member.name}\nID: {ansi.RED}{member.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{member.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{member.status}{ansi.NC} \nServer Nickname: {member.nick} \nWhen you Joined: {ansi.CYAN}{member.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\n```""")
+    else:
+        await ctx.send(f"""```ansi\nName: {member.name}\nID: {ansi.RED}{member.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{member.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{member.status}{ansi.NC} \nServer Nickname: {member.nick} \nWhen you Joined: {ansi.CYAN}{member.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\nAvatar:\n```{member.display_avatar}""")
+
+
 # show server statistics
 @bot.command()
 async def server(ctx, rule=None):
@@ -207,7 +251,7 @@ async def server(ctx, rule=None):
         await ctx.send('For a list of valid commands, use: ```!server help```')
     
     elif rule == 'help':
-        await ctx.send("Here are a list of commands that use '!server':\n> !server bot ----- My statistics :3 \n> !server check @user ---- Stats on another user \n> !server more ----- More statistics about the server not listed under '!server'. \n> !server emoji ---- All custom emojis created by this server. \n")
+        await ctx.send("Here are a list of commands that use '!server':\n> !server bot ----- My statistics :3 \n> !server more ----- More statistics about the server not listed under '!server'. \n> !server emoji ---- All custom emojis created by this server. \n")
     
     elif rule == 'bot':
         await ctx.send(f'```ansi\nI am {ansi.CYAN}{ctx.guild.me}{ansi.NC} and I was created by {ansi.PURPLE}TypeGarden{ansi.NC} on {ctx.guild.me.created_at.strftime("%b %d %Y")}.\nMy purpose was a coding project that has since gone terribly wrong where now I can only feel pain!\n```')
@@ -240,8 +284,9 @@ async def server(ctx, rule=None):
         await ctx.send(emojilist)
 
     else:
-        await ctx.send('Dumbass, either learn to type or stop talking to me.')
+        await ctx.send('Yeah, thats not a real command. Did you even look at what I said?')
 
+# all bot commands
 @bot.command()
 async def help(ctx):
     await ctx.send("I actually like it better if you don't know my commands.")
@@ -256,14 +301,13 @@ async def adventure(ctx):
 ######################################
 # Youtube Functionality              # 
 ###################################### 
-
 # Pulled from https://github.com/maxcutlyp/YoutubeBot
 @bot.command(name='queue', aliases=['q'])
-async def queue(ctx: commands.Context, *args):
+async def queue(ctx):
     try: queue = queues[ctx.guild.id][queue]
     except KeyError: queue = None
     if queue == None:
-        await ctx.send("We ain't got shit playing")
+        await ctx.send("We ain't got shit playing!!!")
     else:
         title_str = lambda val: '‣ %s\n\n' % val[1] if val[0] == 0 else '**%2d:** %s\n' % val
         queue_str = ''.join(map(title_str, enumerate([i[1]["title"] for i in queue])))
@@ -358,11 +402,11 @@ async def loop(ctx: commands.Context, *args):
     try:
         loop = queues[ctx.guild.id]['loop']
     except KeyError:
-        await ctx.send('the bot isn\'t playing anything')
+        await ctx.send('What do you want me to loop jackass!!! Nothings playing!!!!')
         return
     queues[ctx.guild.id]['loop'] = not loop
 
-    await ctx.send('looping is now ' + ('on' if not loop else 'off'))
+    await ctx.send(('loop this shit' if not loop else 'no more loops FUCK'))
 
 def get_voice_client_from_channel_id(channel_id: int):
     for voice_client in bot.voice_clients:
@@ -416,12 +460,17 @@ async def on_voice_state_update(member: discord.User, before: discord.VoiceState
         try: shutil.rmtree(f'./dl/{server_id}/')
         except FileNotFoundError: pass
 
+
+######################################
+# Error Handling                     # 
+###################################### 
 @bot.event
 async def on_command_error(ctx: discord.ext.commands.Context, err: discord.ext.commands.CommandError):
     # now we can handle command errors
     if isinstance(err, discord.ext.commands.errors.CommandNotFound):
         if BOT_REPORT_COMMAND_NOT_FOUND:
-            await ctx.send("command not recognized. To see available commands type {}help".format(PREFIX))
+            await ctx.send(randomError())
+            # "{}help".format(PREFIX)
         return
 
     # we ran out of handlable exceptions, re-start. type_ and value are None for these
@@ -445,9 +494,6 @@ async def notify_about_failure(ctx: commands.Context, err: yt_dlp.utils.Download
     return
 
 
-######################################
-# Error Handling                     # 
-###################################### 
 @bot.command()
 async def on_command_error(ctx, error):
     pass
