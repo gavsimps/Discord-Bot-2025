@@ -92,29 +92,41 @@ async def on_message(msg):
     if str(BOTID) in msg.content.lower():
         await msg.channel.send(randomMessage())
 
+@bot.command(name='restart')
+async def restart(ctx):
+    if ctx.author.id == MYID:
+        await ctx.send("You killing me?? Wtf man.")
+        os.execv(sys.executable, ['python'] + sys.argv)
+    else:
+        await ctx.reply('You cant do that idiot')
+
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def clean(ctx, num):
     number = int(num)
-    await ctx.channel.purge(limit=number)
+    await ctx.channel.purge(limit=number+1)
 
 # randomly dc someone
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def d(ctx, before, after):
-    # vc_list = ctx.guild.voice_channels
-    # for vc in vc_list:
-    #     if before.vc == vc and after.vc is not None:
-    #         print(vc)
+async def d(ctx): 
+    vc_list = ctx.guild.voice_channels
+    channel = bot.get_channel(MAIN_CHANNEL)
+    active_channels = []
+    memids = []
+    for vc in vc_list:
+        if len(vc.members) > 0:
+            active_channels.append(vc)
+            for member in vc.members:
+                memids.append(member)
+    
+    lucky = random.choice(memids)
 
-    # disconnect = []
-    # for member in members:
-    #     disconnect.append(member)
-    # lucky1 = random.choice(disconnect)
-    # await lucky1.move_to(None)
-    pass
+    await lucky.move_to(None)
 
-
+    await channel.send(f'{get_mention(lucky.id)} got unlucky. What a stupid feature.')
+    
+# russian roulette
 @bot.command()
 async def r(ctx):
     num = randint(1,6)
@@ -155,6 +167,35 @@ async def on_voice_state_update(member, before, after):
         # dm = await bot.create_dm(me)
         # await dm.send('IT IS NOW TEKKEN TIME')
 
+# show user stats
+@bot.command()
+async def me(ctx):
+    roles = []
+    for role in ctx.author.roles:
+        roles.append(role.name)
+    roles.remove('@everyone')
+
+    roles = ["- " + item for item in roles]
+    # roles = [item + "\n" for item in roles]
+
+    roles.sort(reverse=True)
+    rolelist = "\n".join(roles)
+
+    if 'online' in ctx.author.status:
+        online_status = ansi.GREEN
+    elif 'dnd' in ctx.author.status:
+        online_status = ansi.RED
+    elif "idle" in ctx.author.status:
+        online_status = ansi.YELLOW
+    else:
+        online_status = ansi.NC
+    
+    if ctx.author.id == 595013132146180099:
+        await ctx.send(f"""```ansi\nName: {ctx.author.name}\nID: {ansi.RED}{ctx.author.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{ctx.author.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{ctx.author.status}{ansi.NC} \nServer Nickname: {ctx.author.nick} \nWhen you Joined: {ansi.CYAN}{ctx.author.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\n```""")
+    else:
+        await ctx.send(f"""```ansi\nName: {ctx.author.name}\nID: {ansi.RED}{ctx.author.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{ctx.author.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{ctx.author.status}{ansi.NC} \nServer Nickname: {ctx.author.nick} \nWhen you Joined: {ansi.CYAN}{ctx.author.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\nAvatar:\n```{ctx.author.display_avatar}""")
+
+# show server statistics
 @bot.command()
 async def server(ctx, rule=None):
     created = ctx.guild.created_at.strftime("%b %d %Y")
@@ -166,36 +207,10 @@ async def server(ctx, rule=None):
         await ctx.send('For a list of valid commands, use: ```!server help```')
     
     elif rule == 'help':
-        await ctx.send("Here are a list of commands that use '!server':\n> !server bot ----- My statistics :3\n> !server me ----- Personal User Stats \n> !server more ----- More statistics about the server not listed under '!server'. \n> !server emoji ---- All custom emojis created by this server. \n")
+        await ctx.send("Here are a list of commands that use '!server':\n> !server bot ----- My statistics :3 \n> !server check @user ---- Stats on another user \n> !server more ----- More statistics about the server not listed under '!server'. \n> !server emoji ---- All custom emojis created by this server. \n")
     
     elif rule == 'bot':
         await ctx.send(f'```ansi\nI am {ansi.CYAN}{ctx.guild.me}{ansi.NC} and I was created by {ansi.PURPLE}TypeGarden{ansi.NC} on {ctx.guild.me.created_at.strftime("%b %d %Y")}.\nMy purpose was a coding project that has since gone terribly wrong where now I can only feel pain!\n```')
-
-    elif rule == 'me':
-        roles = []
-        for role in ctx.author.roles:
-            roles.append(role.name)
-        roles.remove('@everyone')
-
-        roles = ["- " + item for item in roles]
-        # roles = [item + "\n" for item in roles]
-
-        roles.sort(reverse=True)
-        rolelist = "\n".join(roles)
-
-        if 'online' in ctx.author.status:
-            online_status = ansi.GREEN
-        elif 'dnd' in ctx.author.status:
-            online_status = ansi.RED
-        elif "idle" in ctx.author.status:
-            online_status = ansi.YELLOW
-        else:
-            online_status = ansi.NC
-        
-        if ctx.author.id == 595013132146180099:
-            await ctx.send(f"""```ansi\nName: {ctx.author.name}\nID: {ansi.RED}{ctx.author.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{ctx.author.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{ctx.author.status}{ansi.NC} \nServer Nickname: {ctx.author.nick} \nWhen you Joined: {ansi.CYAN}{ctx.author.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\n```""")
-        else:
-            await ctx.send(f"""```ansi\nName: {ctx.author.name}\nID: {ansi.RED}{ctx.author.id}{ansi.NC} \nAccount Creation Date: {ansi.CYAN}{ctx.author.created_at.strftime("%b %d %Y")}{ansi.NC} \nStatus: {online_status}{ctx.author.status}{ansi.NC} \nServer Nickname: {ctx.author.nick} \nWhen you Joined: {ansi.CYAN}{ctx.author.joined_at.strftime("%b %d %Y")}{ansi.NC}\n\nRoles:\n{rolelist}\nAvatar:\n```{ctx.author.display_avatar}""")
 
     elif rule == 'more':
         curr_online = await bot.fetch_guild(ctx.guild.id, with_counts = True)
