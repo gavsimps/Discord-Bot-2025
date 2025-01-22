@@ -45,6 +45,8 @@ JACOB_ID = 190279777809203200
 BOTID = 1237268045936857119
 MYID = 202108000310263818
 
+blacklist = []
+
 # POKETWOBOT = 716390085896962058
 
 # sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
@@ -151,10 +153,11 @@ async def r(ctx):
     if num == 6:
         await ctx.send('Uh oh, loaded round!')
 
-        rand_time = randint(1,11)
+        rand_time = randint(1,10080)
         # rand_time = 720
 
         timeout_duration = timedelta(minutes=rand_time)
+        print(f'{timeout_duration} minutes')
         timer = datetime.now(pytz.utc) + timeout_duration
 
         memberid = ctx.author.id
@@ -165,6 +168,7 @@ async def r(ctx):
             await member.move_to(None)
             await ctx.send("Sadly, I'm not strong enough to kill them :pensive:")
         else:
+            await ctx.send(f':gun: They are dead for {rand_time} minutes. :skull:')
             await ctx.author.timeout(timer, reason='See you in hell!')
     else:
         await ctx.send('Lucky break, it was a blank!')
