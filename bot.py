@@ -89,7 +89,7 @@ async def on_message(msg):
                     'IF YOU ARE AN ADMIN TYPE !RESTART TO KILL ME',
                     "Whats up? Need something, stupid?",
                     "I'm always listening btw",
-                    "I have a secret, message prompt, try to find it ;)",
+                    "I have a secret message prompt, try to find it ;)",
                     "Yes, I am funded by the CCP and your data is being sold to them. They really like the yaoi."]
         random_message = random.choice(messages)
         return random_message
