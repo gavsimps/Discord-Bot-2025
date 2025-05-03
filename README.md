@@ -1,4 +1,4 @@
-# GardenBot - Testing stupid shit on discord with Python
+# GardenBot - Testing Capabilities of a Discord Bot
 
 ## Initial Setup
 - clone this repository into whatever directory you choose
